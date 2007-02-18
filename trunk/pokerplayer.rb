@@ -3,69 +3,85 @@ CALL 	= 1
 RAISE = 2
 BLIND = 3
 
+   def action_str(a)
+      return case a[0]
+         when FOLD;  "FOLD"
+         when CALL;  "CALL"      
+         when RAISE; "RAISE #{a[1]}"      
+         when BLIND; "BLIND #{a[1]}"
+         else "???"
+      end
+   end
+
+
 class PlayerInfos
 
    attr_accessor(
       :name,      
       :position,
-      :bank_roll,
-		:folded
+      :bank_roll,    # how much money he currently has
+		:folded,			# hand folded (false or true)
+      :last_action,
+      :hand_amount,  # how much money he put in this hand
+      :loop_amount, # how much money he put in this loop
+      :total_amount # how much money he won
       )
       
    def initialize(name, position, bank_roll)
       @name, @position, @bank_roll = name, position, bank_roll
-		@folded == false
+		@folded = false
+      @last_action = nil
+      @hand_amount = @loop_amount =0
    end
-   
+
+   def to_s
+      "#{name} (#{position}) #{action_str(last_action)}. Loop amount: #{loop_amount} Hand amount: #{hand_amount}. Bank roll: #{bank_roll}"
+   end
+
 end
 
 
 class PokerPlayer
 
 	attr_accessor(
-		:name, 			# player name
-		:hole_cards, 	# [,] see module cards for definition of cards
+      :infos,           # common player info
+		:hole_cards, 	# [['A','s'],['7','c']] see module cards for definition of cards
 		:to_call, 		# amount to put on the table if you want to call
-      :bet_size,     # small blind amount
+      :blinds,     # small blind amount
 		:min_raise, 	# minimum amount for raising
 		:max_raise,		# maximum amount for raising (== cash if no limit)
-		:cash, 			# how much money you have left
 		:pot_size, 		# how much in the pot counting the current players bets
 		:cards,			# cards on the table, ex: [[3,s],[4,h],[K,d],[],[]]
-		:position,		# position at the table
 		:button,			# position of the button
 		:nb_players,	# nb of players
       :game_id,      # current game id
       :who,          # who must act
-      :bank_roll,    # how much money we currently have
-      :hand_amount,  # how much money we put in this hand
-      :round,        # round 0=preflop, 1 flop, 2 turn, 3 river
-      :total_amount, # how much money we won
-		:folded			# hand folded (false or true)
+      :round        # round 0=preflop, 1 flop, 2 turn, 3 river
 		)
 		
 	def initialize(name)
 		@name = name
       @total_amount = 0
+      @infos = PlayerInfos.new(name,0,0)      
       start_hand
 	end
 	
    def start_hand
       debug 'start hand'
       clear_players
-		@round = @bank_roll = @hand_amount = @to_call = @bet_size = @pot_size = @min_raise = @max_raise = @cash = 0
+		@round =  @to_call = @blinds = @pot_size = @min_raise = @max_raise =  0
 		@hole_cards = @cards = []
    end
    
    def add_player(position, name, bank_roll)
       debug "Adding player #{name}, position=#{position}, bank roll=#{bank_roll}"
-      @players << PlayerInfos.new(name, position, bank_roll)
+      @players[position] = PlayerInfos.new(name, position, bank_roll)
    end
    
    def clear_players
-      @players = []
+      @players = Hash.new
    end
-   
+  
 	# return the action
 	# [0]: fold
 	# [1]: calls
@@ -75,25 +91,11 @@ class PokerPlayer
 	end
 	
 	# tells who is the next player to play and if it us return our action
-	def next(who, to_call, min, max)
-      debug "NEXT who=#{who}, to_call=#{to_call}"
+	def next(is_blind,who, to_call, min, max)
+      debug "NEXT is #{@players[who].name} (#{who}), to_call=#{to_call}"
       @who, @to_call, @min_raise, @max_raise = who, to_call, min, max
-      rv = [CALL]
-      if(who==@position)
-         if @round==0
-            if small_blind?(who)
-               debug "I am small blind" 
-               @hand_amount -= @to_call
-               return rv
-            elsif big_blind?(who)
-               debug "I am big blind"
-               @hand_amount -= @to_call
-               return rv
-            end
-         end   
-         rv = play
-      end
-      return rv
+      return play if(!is_blind and who==@infos.position)
+      return nil
 	end
    
    def small_blind?(who)
@@ -106,43 +108,57 @@ class PokerPlayer
       return false
    end
 
+
+   def player_bets(who,amount)
+      return
+      
+      # c'est n'imp cette fonction
+      # quelle est la defintion de @to_call et de amount ?
+      # to call = loop_amount + raise ?
+      # to_call = raise ?
+      diff = @to_call - @players[who].loop_amount
+		@pot_size += @to_call - la
+      @players[who].hand_amount += @to_call
+      @players[who].loop_amount += @to_call-la
+      @players[who].bank_roll -= @to_call
+      if(who==@infos.position) # ourself
+         @infos.hand_amount += @to_call
+         @infos.loop_amount += @to_call-la
+         @infos.bank_roll -= @to_call
+      end
+      
+   end
    
 	# tells the action played
    def update(who,action)
+      #debug "Update: #{who}, #{action.join("%")}"
+      #debug "Update: #{@players}"
+      #debug "Update: #{@players[who]}"
+      @players[who].last_action = action
 		case action[0]
 			when FOLD
-            #todo: flag it folded
+            @players[who].folded = true
 			when CALL
-				@pot_size += @to_call
+            player_bets(who,@to_call)
 			when RAISE
-				@pot_size += action[1]
             @to_call  += action[1]
+            player_bets(who,action[1])
 			when BLIND
-				@pot_size += action[1]
+            player_bets(who,action[1])
       end
-      debug "UPDATE #{who} action: #{action}.  Pot: #{@pot_size}. To call: #{to_call}"
-   end
-   
-   def action_str(a)
-      return case a
-         when FOLD;  "FOLD"
-         when CALL;  "CALL"      
-         when RAISE; "RAISE"      
-         when BLIND; "BLIND"
-         else "???"
-      end
+      debug "UPDATE "+ @players[who].to_s + " Pot: #{@pot_size}. To call: #{to_call}"
    end
    
    def winner(who,share)
       debug "#{who} wins #{share}"
-      if(who==@position)
-         @hand_amount += share 
+      if(who==@infos.position)
+         @infos.hand_amount += share 
       end
    end
    
    def hand_end
-      @total_amount += @hand_amount
-      debug "hand: #{@hand_amount}, total:#{@total_amount}"
+      @infos.total_amount += @infos.hand_amount
+      debug "hand: #{@infos.hand_amount}, total:#{@infos.total_amount}"
    end
 
 	def info(str)

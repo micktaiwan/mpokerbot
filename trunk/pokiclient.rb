@@ -51,10 +51,11 @@ class PokiClient
          when 54 # chat
 				@player.chat(msg.chomp.chomp)
          when 50 # start game
-            @player.bet_size, @player.nb_players, @player.button, @player.position, @player.game_id = msg.unpack("NNNNN")
-            @player.to_call = @player.bet_size
+            @player.blinds, @player.nb_players, @player.button, @player.infos.position, @player.game_id = msg.unpack("NNNNN")
+            @player.to_call = @player.blinds
             @player.pot_size = 0
-            debug  "bet size=#{@player.bet_size}, nb players=#{@player.nb_players}, button=#{@player.button}, position=#{@player.position}, game id=#{@player.game_id}"
+            @action_number = 0
+            debug  "blinds=#{@player.blinds}, nb players=#{@player.nb_players}, button=#{@player.button}, position=#{@player.infos.position}, game id=#{@player.game_id}"
             from = 20
             @player.start_hand
             for i in 0..@player.nb_players-1
@@ -62,15 +63,14 @@ class PokiClient
                bank_roll, from =  get_int(msg,from)
                face, from =  get_int(msg,from)
                @player.add_player(i,name,bank_roll)
-               @player.bank_roll = bank_roll if i==@player.position
             end
          when 51 # hole cards
             who, c1v,c1c,blank,c2v,c2c = msg.unpack("NA1A1A1A1A1")
-            if(who==@player.position)
+            if(who==@player.infos.position)
                debug "Our cards: #{c1v+c1c+blank+c2v+c2c}"
                @player.hole_cards = [[c1v,c1c] , [c2v,c2c]]
             else
-               debug "Player #{who}'s cards: #{c1v+c1c+blank+c2v+c2c}"
+               debug "#{@player.players[who].name} (#{who})'s cards: #{c1v+c1c+blank+c2v+c2c}"
             end   
          when 52 # new round
             round, cards = msg.unpack("NZ14")
@@ -108,10 +108,12 @@ class PokiClient
 				min, from = get_int(msg,8)
 				max, from = get_int(msg,12)
             debug "NEXT: who=#{who}, to_call=#{to_call}, min=#{min}, max=#{max}"
-            action, how_much = @player.next(who,to_call,min,max)
-            if action != nil and who == @player.position
+            blind = @action_number < 2
+            action, how_much = @player.next(blind,who,to_call,min,max)
+            if action != nil and who == @player.infos.position
                send_action(action,how_much)
-            end   
+            end
+            @action_number += 1
          when 60
             debug "PING"
             @tcp.format_send(PONG)

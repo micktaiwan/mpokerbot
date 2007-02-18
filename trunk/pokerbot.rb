@@ -8,7 +8,7 @@ class PokerBot < PokerPlayer
 	end
 	
    def debug(str)
-      puts "[#{name.upcase}] " + str
+      puts "[BOT #{@infos.position}] " + str.to_s
    end
    
 	def play
@@ -25,17 +25,12 @@ class PokerBot < PokerPlayer
 			if (@to_call > @pot_size*@win_percent)  and (@to_call > 10 and @round>0) # taking count of the pot
 				action = [FOLD]
 			#elsif @to_call < (@pot_size*@win_percent) / 3
-	      #    #@bank_roll -= @to_call+@raise
-	      #   @hand_amount -= @to_call+@raise
 	      #   action = [RAISE,@raise]
 			else
-	         #puts @bank_roll, @to_call
-	         #@bank_roll -= @to_call
-	         @hand_amount -= @to_call
 				action = [CALL]
 			end
 		end
-      debug "ACTION=#{action_str(action[0])}. Paid so far: #{@hand_amount}$. Bank roll: #{@bank_roll}"
+      debug "ACTION=#{action_str(action[0])}"
       action
    end
 	
@@ -50,7 +45,7 @@ class PokerBot < PokerPlayer
 		@raise = @max_raise
 		#@raise = @pot_size/2
       debug "round #{round}: #{@hole_cards} value=#{@win_percent}"
-      sleep(2)
+      #sleep(2)
 	end
 
    def position_value
@@ -65,7 +60,12 @@ class PokerBot < PokerPlayer
       a = @hole_cards[0]
       b = @hole_cards[1]
       s = same_suit?(@hole_cards) ? "s":""
-      return @starting_hand_eval[a[0]+b[0]+s]
+      if(value_order(a[0]) > value_order(b[0]))
+         str = a[0]+b[0]+s
+      else
+         str = b[0]+a[0]+s
+      end
+      return @starting_hand_eval[str]
    end
    
    def same_suit?(cards)
@@ -75,6 +75,17 @@ class PokerBot < PokerPlayer
          suit = c[1] if suit == nil
          }
       return true
+   end
+   
+   def value_order(c)
+   		return case c
+			when 'A'; 14
+			when 'T'; 10
+			when 'J'; 11
+			when 'Q'; 12
+			when 'K'; 13
+			else return c.to_i
+		end
    end
    
    def calculate_postflop_hand
