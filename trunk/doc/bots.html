@@ -1,0 +1,521 @@
+<HTML>
+
+<HEAD>
+<TITLE>  
+	Poker Bots:  Online Poker Protocol (v1.1)
+</TITLE>
+</HEAD>
+
+<BODY BGCOLOR="#EEEEFF">
+<H1>Writing Poker Bots for the Poki Poker Server</H1>
+<H2>Online Poker Protocol (v1.1)</H2>
+<H3>Updated March 26th 2004, Aaron Davidson</H3>
+
+Poker AI programs need a way to play each other -- both for tournaments,
+gathering empirical data, and playing against humans online. This
+protocol is currently for fixed limit Texas Hold'em. Later, it will be
+expanded to handle other variants such as pot limit and no limit. 
+
+
+<P>
+<B>New:</b> Also check out the commercial product <A 
+href="http://www.poki-poker.com/"> Poki's Poker Academy</a>
+which has a plug-in API for adding and testing your own custom bots against poki.
+
+<P> This protocol consists of simple messages being passed from server
+to client. The server hosts the game, the client acts as a player in a
+game.  If you are familiar with the IRC poker system, this has a similar
+high level architecture, except the IRC layer is removed and replaced
+with a poker specific layer of communications.
+
+<P> The full details of the protocol are documented here, but source
+code (see section 5 below) that implements many of the lower level
+details will be provided.  Anyone is welcome to implement their programs
+from scratch, but the provided source code should make it much easier to
+get your poker program to support the protocol.<P> Please send
+suggestions to <A
+HREF="mailto:davidson@cs.ualberta.ca">davidson@cs.ualberta.ca</A>
+
+
+<HR>
+
+<H3>Bot Rules & Etiquette</H3>
+
+Your bots are guests on our server, which we use as a way to gather
+experimental results on our own bots. Please repsect the following:<BR>
+
+<UL>
+<LI>For all testing, play in the bots-only room. If your bot is slow,
+crashes frequently, or plays very badly, do not play in the rooms
+designated for humans. Humans are extremly annoyed by slow bots. We do
+not want to chase away our human players as they provide the best
+measure of performance. Likewise, if your bot is stupidly raising every
+hand, etc..., this is also very annoying. Furthermore, we do not want
+super-weak players in the game feeding both our bots and the humans. 
+This vastly inflates the winnings of all good players, which interferes
+with our main goal of getting reliable experimental results. Novelty
+bots (we have seen many on our servers) simply waste our time, and
+occupy a seat that other, valid players could hold.<BR>
+
+<LI>If the room is full, periodically (after an hour or so) log off for
+five minutes to allow other players to take the seat. This will allow
+players waiting in line to have a chance to play. <BR>
+
+<LI>If a player chats "YourBotName please leave", and the game is full,
+consider having your bot log out at the end of the current hand, so that
+player can play.<BR>
+
+<LI>It is our convention to suffix the name of your program with 'bot',
+(i.e., Pokibot, RotnBot, etc...). Please do so to signify that the
+player is a bot. Please also register your bot with
+davidson@cs.ualberta.ca -- and I can give the bot a special player icon
+that looks like a robot.<BR>
+
+<LI>Only one bot at a time please! Do not have multiple bots playing in
+the same room. Multiple bots are suspicious, and are hogging seats. <BR>
+
+<LI>Until you need data against humans, play in the bots-only room.
+There is no point in taking up seats in the human games until your bot
+is ready. It should be able to at least break even in the bots-only
+game before being ready to play the humans.<BR>
+
+<LI>We would really appreciate it if bot writers would email us and tell
+us a little about your bot (As much as you are comfortable divulging).
+We would love to hear the techniques and strategies you use, and how well they
+are working, plus any other interesting experiences. 
+
+</UL>
+
+<H3>Bot Servers</H3>
+
+A listing of the current poker servers can be found here:
+
+<A HREF="data/servers.txt">Server Listing</A> giving the address, port
+and room title.
+
+<H3>Source Code</H3>
+<UL>
+ <LI><A HREF="downloads/botsrc.tar.gz">Unix C bot source</A> contains C source code 
+      that implements the above protocol.<BR> 
+		Thanks to <A HREF="http://www.sellsbrothers.com">Chris Sells</A> for
+		making the code Windows compatible.
+		<blockquote>Note: This code is provided as an example of implementing the 
+		protocol only. It is slightly buggy, and doesn't track the game
+		state very well. Please use it with caution</i>. The 
+		<a href="http://spaz.ca/aaron/poker/src/">java BotPlayer</a>
+		class is much more robust if you are looking for a solid implementation.
+		</blockquote>
+ <LI><A HREF="downloads/perlbot.zip">Perl bot source</A> was written by
+	 Vince Hurrell.
+</UL>
+
+
+<HR>
+
+<H3>Message Passing</H3>
+Messages are passed by writing the following to a TCP/IP socket stream:<BR>
+	<OL>
+	   <LI> a four byte integer containing the ID of a message
+   	<LI> a four byte integer containing the size of the message data
+   	<LI> the message data itself
+	</OL>
+	<P>
+Source code that implements all of this message passing, and networking 
+details is available in Java and in C (for UNIX Sockets). Minor changes
+should allow the C code to compile under Windows.
+<P>
+
+<H3>Logging on to the Server</H3>
+Once the low level message passing is dealt with, the protocol simply becomes
+a matter of passing the right messages back and forth from the client to the 
+server. The various messages have been assigned farily arbitrary numerical values. Each message has a defined format, given below. Strings are c-style, null terminated. Integers are 4-bytes long.
+<P>
+The first step is to log on to the server by establishing a connection and logging onto the poker server.
+For each message listed below, the number in square brackets next to the message name
+is the message ID.
+<P>
+You do not need to obtain a user name and password -- simply log on
+using your name and password of choice, and if the name is not yet 
+taken, a new account will be created automatically.
+
+<P><TABLE CELLSPACING=0 CELLSPACING=0 CELLPADDING=5 WIDTH="100%">
+<TR>
+   <TD BGCOLOR="#AABBCC" COLSPAN=3> <CODE> [20] JOIN_GAME </CODE></TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> String </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> userid </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> the user id the client will play under </TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> String </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> passwd </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> the password for the given userid </TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> int </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> version </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> Protocol Version (1) </TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> String </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> client_name </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> The name of your program (optional)</TD>
+</TR>
+<TR>
+  	<TD BGCOLOR="#BBBBCC" COLSPAN=3>
+	    If the password is incorrect, the server will respond with a 
+					BADPASS message	otherwise it will respond with a GOODPASS message.	
+   </TD>
+</TR>
+</TABLE CELLSPACING=0>
+
+<P><TABLE CELLSPACING=0 CELLSPACING=0 CELLPADDING=5 WIDTH="100%">
+<TR>
+   <TD BGCOLOR="#AABBCC" COLSPAN=3> <CODE> [21] GOODPASS </CODE></TD>
+</TR>
+<TR>
+  	<TD BGCOLOR="#BBBBCC" COLSPAN=3>
+	    Authentication successful. Proceed to main game loop.	
+   </TD>
+</TR>
+</TABLE>
+
+<P><TABLE CELLSPACING=0 CELLSPACING=0 CELLPADDING=5 WIDTH="100%">
+<TR>
+   <TD BGCOLOR="#AABBCC" COLSPAN=3> <CODE> [22] BADPASS </CODE></TD>
+</TR>
+<TR>
+  	<TD BGCOLOR="#BBBBCC" COLSPAN=3>
+	    Authentication failed.
+   </TD>
+</TR>
+</TABLE>
+
+<P><TABLE CELLSPACING=0 CELLSPACING=0 CELLPADDING=5 WIDTH="100%">
+<TR>
+   <TD BGCOLOR="#AABBCC" COLSPAN=3> <CODE> [24] BADNICK </CODE></TD>
+</TR>
+<TR>
+  	<TD BGCOLOR="#BBBBCC" COLSPAN=3>
+	    Authentication failed (nickname is not of proper length
+		or contains illegal characters)
+   </TD>
+</TR>
+</TABLE>
+
+<P>
+<H3>Server Game Updates</H3>
+After a successful authentication, we enter the main game loop.
+<P>
+The server will send all queued game update messages to the client
+<P> Below are the possible messages the server may send:
+
+
+<P><TABLE CELLSPACING=0 CELLSPACING=0 CELLPADDING=5 WIDTH="100%">
+<TR>
+   <TD BGCOLOR="#AABBCC" COLSPAN=3> <CODE> [50] START_NEW_GAME </CODE></TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> int </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> bet_size </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> the starting bet size (eg. 10 in a 10-20 game)</TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> int </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> num_players </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> the number of players in the game </TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> int </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> button </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> the position of the button </TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> int </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> position </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> your position (index into player data sent below,
+								  or -1 if you are not dealt in) </TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> int </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> gameID </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> ID number for this hand </TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"COLSPAN=3> <CODE> <B>for each player:</B> </CODE> </TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> String </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> player_name </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> the userid of the nth player </TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> int </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> bankroll </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> the bankroll of the nth player </TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> int </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> face </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> face icon ID (used for display in Applet) </TD>
+</TR>
+</TABLE>
+
+<P><TABLE CELLSPACING=0 CELLSPACING=0 CELLPADDING=5 WIDTH="100%">
+<TR>
+   <TD BGCOLOR="#AABBCC" COLSPAN=3> <CODE> [51] HOLE_CARDS </CODE></TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> int </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> who </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> the player whose cards are being revealed</TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> String </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> hole_cards </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> eg: "Ah 5c" </TD>
+</TR>
+<TR>
+  	<TD BGCOLOR="#BBBBCC" COLSPAN=3>
+					 if <CODE>who</CODE> is equal to your position, then this is used to send
+	     you your hole cards. Otherwise, it is used to reveal a player's
+ 					hand in a showdown.	
+   </TD>
+</TR>
+</TABLE>
+
+<P><TABLE CELLSPACING=0 CELLSPACING=0 CELLPADDING=5 WIDTH="100%">
+<TR>
+   <TD BGCOLOR="#AABBCC" COLSPAN=3> <CODE> [52] NEW_STAGE </CODE></TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> int </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> round </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> (FLOP == 1, TURN == 2, RIVER == 3)</TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> String </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> board_cards </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> board cards. eg: "Jd Ks 3s 3h" </TD>
+</TR>
+</TABLE>
+
+
+<P><TABLE CELLSPACING=0 CELLSPACING=0 CELLPADDING=5 WIDTH="100%">
+<TR>
+   <TD BGCOLOR="#AABBCC" COLSPAN=3> <CODE> [57] NEXT_TO_ACT </CODE></TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> int </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> who </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> the player to act</TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> int </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> to_call </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> the amount to call </TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> int </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> min_bet </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> the smallest bet allowed 
+								(-1 if no more raises) </TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> int </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> max_bet </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> the largest bet allowed 
+								(-1 if no more raises) </TD>
+</TR>
+</TABLE>
+
+
+<P><TABLE CELLSPACING=0 CELLSPACING=0 CELLPADDING=5 WIDTH="100%">
+<TR>
+   <TD BGCOLOR="#AABBCC" COLSPAN=3> <CODE>     
+     [3] BLIND, [0] FOLD, [1] CALL, [2] RAISE 
+   </CODE></TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> int </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> who </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> the player who has acted</TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> int </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> amount </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> amount ($) paid to the pot (if applicable) </TD>
+</TR>
+</TABLE>
+
+
+
+
+<P><TABLE CELLSPACING=0 CELLSPACING=0 CELLPADDING=5 WIDTH="100%">
+<TR>
+   <TD BGCOLOR="#AABBCC" COLSPAN=3> <CODE> [53] WINNERS </CODE></TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> int </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> num_winners </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> number of winners </TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"COLSPAN=3> <CODE> <B>for each winner:</B> </CODE> </TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> int </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> who </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> the position of the nth winner </TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> int </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> share </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> the nth winner's share of the pot </TD>
+</TR>
+</TABLE>
+
+<P><TABLE CELLSPACING=0 CELLSPACING=0 CELLPADDING=5 WIDTH="100%">
+<TR>
+   <TD BGCOLOR="#AABBCC" COLSPAN=3> <CODE> [54] CHATTER </CODE></TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> String </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> chat </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> a chat message from another player </TD>
+</TR>
+</TABLE>
+
+<P><TABLE CELLSPACING=0 CELLSPACING=0 CELLPADDING=5 WIDTH="100%">
+<TR>
+   <TD BGCOLOR="#AABBCC" COLSPAN=3> <CODE> [43] INFORMATION </CODE></TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> String </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> info </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> an informational message from the server </TD>
+</TR>
+</TABLE>
+
+<P><TABLE CELLSPACING=0 CELLSPACING=0 CELLPADDING=5 WIDTH="100%">
+<TR>
+   <TD BGCOLOR="#AABBCC" COLSPAN=3> <CODE> [60] PING </CODE></TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> This is sent when the server wants to
+	see if you are still alive. You can respond with a PONG
+	or any other message (optional).</TD>
+</TR>
+</TABLE>
+
+
+<P><TABLE CELLSPACING=0 CELLSPACING=0 CELLPADDING=5 WIDTH="100%">
+<TR>
+   <TD BGCOLOR="#AABBCC" COLSPAN=3> <CODE> [45] SET_FACE </CODE></TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> String </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> who </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> the face ID of the player 
+		Faces can be loaded from the webserver at
+		<I>./data/faces/pX.gif</I> where X is the ID number
+		of the face.
+	</TD>
+</TR>
+</TABLE>
+
+<P>
+<H3>Client Game Updates</H3>
+The following are the messages that a client player may send
+to the server. 
+
+<P><TABLE CELLSPACING=0 CELLSPACING=0 CELLPADDING=5 WIDTH="100%">
+<TR>
+   <TD BGCOLOR="#AABBCC" COLSPAN=3> <CODE> [30] ACTION </CODE></TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> int </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> action </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> (FOLD == 0, CHECK/CALL == 1, BET/RAISE == 2) </TD>
+</TR>
+</TABLE>
+
+<P><TABLE CELLSPACING=0 CELLSPACING=0 CELLPADDING=5 WIDTH="100%">
+<TR>
+   <TD BGCOLOR="#AABBCC" COLSPAN=3> <CODE> [32] CHAT </CODE></TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> String </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> chat_string </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> say something to all other players in the game </TD>
+</TR>
+</TABLE>
+
+<P><TABLE CELLSPACING=0 CELLSPACING=0 CELLPADDING=5 WIDTH="100%">
+<TR>
+   <TD BGCOLOR="#AABBCC" COLSPAN=3> <CODE> [33] QUIT_GAME </CODE></TD>
+</TR>
+<TR>
+  	<TD BGCOLOR="#BBBBCC" COLSPAN=3>
+		 Tells the server to remove you from the table, and closes
+	   	your connection.					
+   </TD>
+</TR>
+</TABLE>
+
+<P><TABLE CELLSPACING=0 CELLSPACING=0 CELLPADDING=5 WIDTH="100%">
+<TR>
+   <TD BGCOLOR="#AABBCC" COLSPAN=3> <CODE> [61] PONG </CODE></TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> This will tell the server you are still alive.
+	</TD>
+</TR>
+</TABLE>
+
+
+
+<P>
+<H3>Non-critical extra-fun messages</H3>
+
+<P><TABLE CELLSPACING=0 CELLSPACING=0 CELLPADDING=5 WIDTH="100%">
+<TR>
+   <TD BGCOLOR="#AABBCC" COLSPAN=3> <CODE> [47] CHANGE_FACE </CODE></TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> int </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> delta </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> Send +1 or -1 to change to the next or
+		previous face.</TD>
+</TR>
+</TABLE>
+
+<P><TABLE CELLSPACING=0 CELLSPACING=0 CELLPADDING=5 WIDTH="100%">
+<TR>
+   <TD BGCOLOR="#AABBCC" COLSPAN=3> <CODE> [46] GET_FACE </CODE></TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> String </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> who </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> Get face id of 'who' 
+		(returns a SET_FACE message)</TD>
+</TR>
+</TABLE>
+
+<P><TABLE CELLSPACING=0 CELLSPACING=0 CELLPADDING=5 WIDTH="100%">
+<TR>
+   <TD BGCOLOR="#AABBCC" COLSPAN=3> <CODE> [42] GET_GRAPH </CODE></TD>
+</TR>
+<TR>
+   <TD BGCOLOR="#CCCCCC"> <CODE> String </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> <CODE> who </CODE> </TD>
+   <TD BGCOLOR="#CCCCCC"> Ask the server to generate a graph
+		(Sever will respond with a GET_GRAPH with two strings
+		giving the name and the file path of the .gif image)</TD>
+</TR>
+</TABLE>
+
+
+</BODY>
+</HTML>
