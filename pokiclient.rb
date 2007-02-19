@@ -2,8 +2,9 @@ require 'TCPClient'
 require 'pokerbot'
 
 JOIN_GAME = 20
-PONG = 61
 ACTION = 30
+QUIT_GAME = 33
+PONG = 61
 
 class PokiClient
 
@@ -51,13 +52,11 @@ class PokiClient
          when 54 # chat
 				@player.chat(msg.chomp.chomp)
          when 50 # start game
-            @player.blinds, @player.nb_players, @player.button, @player.infos.position, @player.game_id = msg.unpack("NNNNN")
-            @player.to_call = @player.blinds
-            @player.pot_size = 0
-            @action_number = 0
-            debug  "blinds=#{@player.blinds}, nb players=#{@player.nb_players}, button=#{@player.button}, position=#{@player.infos.position}, game id=#{@player.game_id}"
-            from = 20
             @player.start_hand
+            @player.blinds, @player.nb_players, @player.button, @player.infos.position, @player.game_id = msg.unpack("NNNNN")
+            @action_number = 0
+            debug  "GAME START: blinds=#{@player.blinds}, nb players=#{@player.nb_players}, button=#{@player.button}, position=#{@player.infos.position}, game id=#{@player.game_id}"
+            from = 20
             for i in 0..@player.nb_players-1
                name, from  = get_string(msg, from)
                bank_roll, from =  get_int(msg,from)
@@ -78,36 +77,37 @@ class PokiClient
             cards.split.map! {|i| [i[0],i[1]]}
             @player.new_round(round,cards)
          when 0
-            who = msg.unpack("N")
-            debug "who=#{who} fold."
+            who = msg.unpack("N")[0]
+            #debug "who=#{who} fold."
             @player.update(who,[FOLD])
          when 1
-            who = msg.unpack("N")
-            debug "who=#{who} called."
+            who = msg.unpack("N")[0]
+            #debug "who=#{who} called."
             @player.update(who,[CALL])
          when 2
             who,amount = msg.unpack("NN")
-            debug "who=#{who} raise to #{amount}."
+            #debug "who=#{who} raise to #{amount}."
             @player.update(who,[RAISE,amount])
          when 3
             who,amount,msg = msg.unpack("NNZ50")
-            debug "who=#{who} blinds #{amount}."
+            #debug "who=#{who} blinds #{amount}."
             @player.update(who,[BLIND,amount])
          when 53 # END
             nb_winners = msg.unpack("N")[0]
-            debug "nb winners=#{nb_winners}"
+            #debug "nb winners=#{nb_winners}"
             for i in 0..nb_winners-1
                who, from = get_int(msg,4+i*8)
                share, from = get_int(msg,8+i*8)
                @player.winner(who,share)
             end   
             @player.hand_end
-            #break
+            @tcp.format_send(QUIT_GAME) # one hand after the other
+            #break 
          when 57 # NEXT_TO_ACT
             who, to_call = msg.unpack("NN")
 				min, from = get_int(msg,8)
 				max, from = get_int(msg,12)
-            debug "NEXT: who=#{who}, to_call=#{to_call}, min=#{min}, max=#{max}"
+            debug "NEXT: #{@player.players[who].name}, to_call=#{to_call}, min=#{min}, max=#{max}"
             blind = @action_number < 2
             action, how_much = @player.next(blind,who,to_call,min,max)
             if action != nil and who == @player.infos.position
@@ -117,6 +117,8 @@ class PokiClient
          when 60
             debug "PING"
             @tcp.format_send(PONG)
+         when 11 # kicked out
+            debug "we've been kicked out!"
          else
             debug "NOT HANDLED: id=#{id},msg=#{msg}"
             break
