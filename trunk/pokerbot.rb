@@ -12,6 +12,7 @@ class PokerBot < PokerPlayer
    end
    
 	def play
+		return [FOLD]
 		calculate_hand
 		debug "PLAYING #{@hole_cards} - to_call: #{@to_call}, pot size: #{@pot_size}, win percent: #{@win_percent}, max call: #{(@pot_size*@win_percent).floor}"
 		if @win_percent < 0.3 # no chances to win

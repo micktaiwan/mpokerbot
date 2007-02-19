@@ -15,7 +15,10 @@ class PokerGame
 	
 	def add_players(*p)
 		# todo : les ajouter à la position de prochaine big blind
-		p.each {|i| @players << i}
+		p.each {|i|
+         i.infos.bank_roll = 1500 # should be read from a DB
+			@players << i
+			}
 	end
 
 	def remove_player(p)
@@ -23,10 +26,10 @@ class PokerGame
 	end
 
    def player_bets(player,amount)
-         #debug "#{player.infos.name} bets #{amount}"
-         player.infos.loop_amount += amount
-         player.infos.hand_amount += amount
-         player.infos.bank_roll -= amount
+		#debug "#{player.infos.name} bets #{amount}"
+		player.infos.loop_amount += amount
+		player.infos.hand_amount += amount
+		player.infos.bank_roll -= amount
    end
 
 	def start
@@ -86,7 +89,7 @@ class PokerGame
    
    def do_player_loop
       puts
-      debug "=== STARTING ROUND #{@round}"
+      debug "=========== STARTING ROUND #{@round}"
       player_loop { |i|
          #debug "calling next for #{i.infos.name} to call = #{@to_call} - #{i.infos.loop_amount} = #{@to_call-i.infos.loop_amount}"
          @players.each { |p|
@@ -100,13 +103,14 @@ class PokerGame
                   i.infos.folded = true
                else
                   i.infos.folded = false # can not fold if last player
+						@last_action = [CALL]
                end
             when [CALL]
                @pot_size += @to_call #if(@round!=0 or (i.infos.position != small_blind_index and i.infos.position != big_blind_index))
             when [RAISE]
                @pot_size += @to_call + action[1]
          end
-         #debug "#{i.infos.name} played #{action_str(@last_action)}"
+         debug "#{i.infos.name} played #{action_str(@last_action)}"
          @players.each { |p| p.update(i.infos.position, @last_action)}
          #sleep(3)
          }
@@ -151,7 +155,7 @@ class PokerGame
          nb_player_who_talked += 1
          index, player = get_next_to_call(index)
       end
-      #debug  "end player loop"
+      debug  "end player loop"
 	end
 	
    def get_player(index)
@@ -162,16 +166,19 @@ class PokerGame
    # filter folded and all in
    # does not know when to stop
    def get_next_to_call(from)
+		start = from
       while(true)
          index = (from+1).modulo(nb_players)
+			debug "index #{index}"
          player = get_player(index)
-         next if player.infos.folded == true or player.infos.bank_roll == 0
+         next if start != from and (player.infos.folded == true or player.infos.bank_roll == 0)
          return [index,player]
       end
    end
    
    def count_nb_player_to_talk      
-      @players.inject(0) {|sum,i| sum+=1 if(i.infos.folded == false and i.infos.bank_roll > 0)}
+		debug "#{nb_players}"
+      @players.inject(0) { |sum,i| puts i.infos.name; puts sum; (i.infos.folded == false and i.infos.bank_roll > 0) ? sum += 1:sum}
    end
    
 	def small_blind_index
@@ -190,7 +197,9 @@ class PokerGame
 	#end
 	
 	def init_hand
-		#debug 'init hand'
+		debug '=============================='
+		debug '======== New hand ============'
+		debug '=============================='
 		@button = (@button+1).modulo(nb_players)
 		@deck  = (1..52).sort_by{rand}
       @nb_players_in_hand = nb_players
@@ -203,10 +212,8 @@ class PokerGame
          i.to_call = @blinds*2
 			i.min_raise = @blinds*2
 			i.max_raise = @blinds*2
-			i.pot_size = 0 # will be updated
-			i.cards = [[],[],[],[],[]]
          i.infos.position = index
-         i.infos.bank_roll = 1500
+			i.infos.folded = false
 			i.button = @button
          i.blinds = @blinds
 			}
