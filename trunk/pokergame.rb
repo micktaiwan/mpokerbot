@@ -23,18 +23,18 @@ class PokerGame
 	end
 
    def player_bets(player,amount)
-         debug "#{player.infos.name} bets #{amount}"
+         #debug "#{player.infos.name} bets #{amount}"
          player.infos.loop_amount += amount
          player.infos.hand_amount += amount
          player.infos.bank_roll -= amount
    end
 
 	def start
-		debug 'start'
+		#debug 'start'
 		while true
 			init_hand
 			# small and big blinds
-         debug "blinds"
+         #debug "blinds"
 			@players.each { |i|
             i.next(true,small_blind_index, @blinds, @blinds, @blinds)
             i.update(small_blind_index, [BLIND, @blinds])
@@ -45,7 +45,7 @@ class PokerGame
             }
          #player_bets(get_player(small_blind_index),@blinds)
          #player_bets(get_player(big_blind_index),@blinds*2)
-         debug "end of blind"
+         #debug "end of blind"
 
          @pot_size = @blinds*3
          @to_call = @blinds*2
@@ -88,7 +88,10 @@ class PokerGame
       puts
       debug "=== STARTING ROUND #{@round}"
       player_loop { |i|
-         debug "calling next for #{i.infos.name} to call = #{@to_call} - #{i.infos.loop_amount} = #{@to_call-i.infos.loop_amount}"
+         #debug "calling next for #{i.infos.name} to call = #{@to_call} - #{i.infos.loop_amount} = #{@to_call-i.infos.loop_amount}"
+         @players.each { |p|
+            p.next(false,i.infos.position, @to_call-i.infos.loop_amount, 10, 10000) if p != i
+            }
          @last_action = i.next(false,i.infos.position, @to_call-i.infos.loop_amount, 10, 10000)
          case @last_action
             when [FOLD]
@@ -103,7 +106,7 @@ class PokerGame
             when [RAISE]
                @pot_size += @to_call + action[1]
          end
-         debug "#{i.infos.name} played #{@last_action.join('=>')}"
+         #debug "#{i.infos.name} played #{action_str(@last_action)}"
          @players.each { |p| p.update(i.infos.position, @last_action)}
          #sleep(3)
          }
@@ -128,18 +131,18 @@ class PokerGame
    end
 
 	def player_loop
-      debug  "start loop"
+      #debug  "start player loop"
       # start from the first after the big blind if round == 0 else the button
       index = @round==0 ? (big_blind_index+1).modulo(nb_players):@button
       player = get_player(index)
       
       nb_player_who_talked = 0
       nb_player_to_talk = count_nb_player_to_talk
-      debug "nb_player_to_talk #{nb_player_to_talk}"
+      #debug "nb_player_to_talk #{nb_player_to_talk}"
 
       while(true)
          break if player == nil or nb_player_who_talked == nb_player_to_talk
-         debug "player_loop: yielding #{player.infos.name}"
+         #debug "player loop: yielding #{player.infos.name}"
          yield(player)
          if(@last_action[0]==RAISE)
             nb_player_who_talked = 0
@@ -148,7 +151,7 @@ class PokerGame
          nb_player_who_talked += 1
          index, player = get_next_to_call(index)
       end
-      debug  "end loop"
+      #debug  "end player loop"
 	end
 	
    def get_player(index)
@@ -160,7 +163,6 @@ class PokerGame
    # does not know when to stop
    def get_next_to_call(from)
       while(true)
-         debug "."
          index = (from+1).modulo(nb_players)
          player = get_player(index)
          next if player.infos.folded == true or player.infos.bank_roll == 0
@@ -188,7 +190,7 @@ class PokerGame
 	#end
 	
 	def init_hand
-		debug 'init hand'
+		#debug 'init hand'
 		@button = (@button+1).modulo(nb_players)
 		@deck  = (1..52).sort_by{rand}
       @nb_players_in_hand = nb_players
