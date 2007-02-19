@@ -70,7 +70,8 @@ class PokerPlayer
    def start_hand
       clear_players
 		@round =  @to_call = @blinds = @pot_size = @min_raise = @max_raise =  0
-		@hole_cards = @cards = []
+		@hole_cards = []
+		@cards = [[],[],[],[],[]]
    end
    
    def add_player(position, name, bank_roll)
@@ -111,12 +112,12 @@ class PokerPlayer
 
    def player_bets(who,amount)
 		@pot_size += amount
-      @players[who].hand_amount += amount
-      @players[who].loop_amount += amount
+      @players[who].hand_amount -= amount
+      @players[who].loop_amount -= amount
       @players[who].bank_roll -= amount
       if(who==@infos.position) # ourself
-         @infos.hand_amount += amount
-         @infos.loop_amount += amount
+         @infos.hand_amount -= amount
+         @infos.loop_amount -= amount
          @infos.bank_roll -= amount
       end
       
