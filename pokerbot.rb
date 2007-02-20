@@ -8,11 +8,10 @@ class PokerBot < PokerPlayer
 	end
 	
    def debug(str)
-      puts "[BOT #{@infos.position}] " + str.to_s
+      puts "[#{@infos.name}] " + str.to_s
    end
    
 	def play
-		return [FOLD]
 		calculate_hand
 		debug "PLAYING #{@hole_cards} - to_call: #{@to_call}, pot size: #{@pot_size}, win percent: #{@win_percent}, max call: #{(@pot_size*@win_percent).floor}"
 		if @win_percent < 0.3 # no chances to win
@@ -45,7 +44,6 @@ class PokerBot < PokerPlayer
       end
 		@raise = @max_raise
 		#@raise = @pot_size/2
-      debug "round #{round}: #{@hole_cards} value=#{@win_percent}"
       #sleep(2)
 	end
 
@@ -66,7 +64,10 @@ class PokerBot < PokerPlayer
       else
          str = b[0]+a[0]+s
       end
-      return @starting_hand_eval[str]
+      # tmp
+      v = @starting_hand_eval[str]
+      return 0.5 if v > -0
+      return 0
    end
    
    def same_suit?(cards)
