@@ -46,16 +46,11 @@ class PokerGame
             i.next(true,big_blind_index, @blinds*2, @blinds*2, @blinds*2)
             i.update(big_blind_index, [BLIND, @blinds*2])
             }
-         #player_bets(get_player(small_blind_index),@blinds)
-         #player_bets(get_player(big_blind_index),@blinds*2)
+         player_bets(get_player(small_blind_index),@blinds)
+         player_bets(get_player(big_blind_index),@blinds*2)
          #debug "end of blind"
-
-         @pot_size = @blinds*3
-         @to_call = @blinds*2
-         @players.each { |i| i.new_round(0,[[],[],[],[],[]]) }
-         @to_call = @blinds*2
-         
          do_player_loop
+         sleep(1)
          next if every_folded?
          deal_flop   
          @to_call = 0
@@ -107,8 +102,10 @@ class PokerGame
                end
             when [CALL]
                @pot_size += @to_call #if(@round!=0 or (i.infos.position != small_blind_index and i.infos.position != big_blind_index))
+               player_bets(i,@to_call-i.infos.loop_amount)
             when [RAISE]
                @pot_size += @to_call + action[1]
+               player_bets(i,@to_call + action[1] - i.infos.loop_amount)
          end
          debug "#{i.infos.name} played #{action_str(@last_action)}"
          @players.each { |p| p.update(i.infos.position, @last_action)}
@@ -171,7 +168,7 @@ class PokerGame
          index = (from+1).modulo(nb_players)
 			debug "index #{index}"
          player = get_player(index)
-         next if start != from and (player.infos.folded == true or player.infos.bank_roll == 0)
+         next if start != from and (player.infos.folded == true or player.infos.bank_roll <= 0)
          return [index,player]
       end
    end
@@ -200,6 +197,9 @@ class PokerGame
 		debug '=============================='
 		debug '======== New hand ============'
 		debug '=============================='
+      @pot_size = @blinds*3
+      @to_call = @blinds*2
+      @to_call = @blinds*2
 		@button = (@button+1).modulo(nb_players)
 		@deck  = (1..52).sort_by{rand}
       @nb_players_in_hand = nb_players
@@ -221,6 +221,9 @@ class PokerGame
          @players.each { |j|
             i.add_player(j.infos.position,j.infos.name,j.infos.bank_roll)
             }
+         }
+		@players.each { |i|
+         i.new_round(0,[[],[],[],[],[]])
          }
 	end
 	

@@ -69,7 +69,7 @@ class PokerPlayer
 	
    def start_hand
       clear_players
-		@round =  @to_call = @blinds = @pot_size = @min_raise = @max_raise =  0
+		@infos.hand_amount = @infos.loop_amount = @round =  @to_call = @blinds = @pot_size = @min_raise = @max_raise =  0
 		@hole_cards = []
 		@cards = [[],[],[],[],[]]
    end
@@ -112,12 +112,12 @@ class PokerPlayer
 
    def player_bets(who,amount)
 		@pot_size += amount
-      @players[who].hand_amount -= amount
-      @players[who].loop_amount -= amount
+      @players[who].hand_amount += amount
+      @players[who].loop_amount += amount
       @players[who].bank_roll -= amount
       if(who==@infos.position) # ourself
-         @infos.hand_amount -= amount
-         @infos.loop_amount -= amount
+         @infos.hand_amount += amount
+         @infos.loop_amount += amount
          @infos.bank_roll -= amount
       end
       
@@ -143,13 +143,13 @@ class PokerPlayer
    def winner(who,share)
       debug "#{@players[who].name} wins #{share}"
       if(who==@infos.position)
-         @infos.hand_amount += share 
+         @infos.hand_amount -= share 
       end
    end
    
    def hand_end
       @infos.total_amount += @infos.hand_amount
-      debug "STATS: hand: #{@infos.hand_amount}, total:#{@infos.total_amount}"
+      debug "STATS: amount paid: hand: #{@infos.hand_amount}, total:#{@infos.total_amount}"
    end
 
 	def info(str)
