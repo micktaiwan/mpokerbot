@@ -22,14 +22,17 @@ class PokerGame
 	end
 
 	def remove_player(p)
-		#@players.remove_if
+      #@players.find.disconnect
+		#@players.remove
 	end
 
    def player_bets(player,amount)
 		#debug "#{player.infos.name} bets #{amount}"
-		player.infos.loop_amount += amount
-		player.infos.hand_amount += amount
-		player.infos.bank_roll -= amount
+      @pot_size += amount
+      # TODO: we share the same information, so this is done by the class pokerplayer... not so good...
+		#player.infos.loop_amount += amount
+		#player.infos.hand_amount += amount
+		#player.infos.bank_roll -= amount
    end
 
 	def start
@@ -50,22 +53,16 @@ class PokerGame
          player_bets(get_player(big_blind_index),@blinds*2)
          #debug "end of blind"
          do_player_loop
-         sleep(1)
          next if every_folded?
          deal_flop   
-         @to_call = 0
-         @players.each { |i| i.infos.loop_amount = 0 }
          do_player_loop
          next if every_folded?
          deal_turn
-         @to_call = 0
-         @players.each { |i| i.infos.loop_amount = 0 }
          do_player_loop
          next if every_folded?
          deal_river
-         @to_call = 0
-         @players.each { |i| i.infos.loop_amount = 0 }
          do_player_loop
+         debug "TODO: find the winner"
          break
       end # game loop
 	end
@@ -101,31 +98,37 @@ class PokerGame
 						@last_action = [CALL]
                end
             when [CALL]
-               @pot_size += @to_call #if(@round!=0 or (i.infos.position != small_blind_index and i.infos.position != big_blind_index))
                player_bets(i,@to_call-i.infos.loop_amount)
             when [RAISE]
-               @pot_size += @to_call + action[1]
                player_bets(i,@to_call + action[1] - i.infos.loop_amount)
          end
          debug "#{i.infos.name} played #{action_str(@last_action)}"
          @players.each { |p| p.update(i.infos.position, @last_action)}
          #sleep(3)
          }
-   end
-	
+      end
+      
+   def init_loop
+      @to_call = 0
+      @players.each { |i| i.infos.loop_amount = 0 }
+	end
+   
    def deal_flop
+      init_loop
       @a,@b,@c = @deck.shift, @deck.shift, @deck.shift
       @round = 1
       @players.each { |i| i.new_round(@round,[@a,@b,@c,[],[]]) }
    end
    
    def deal_turn
+      init_loop
       @d = @deck.shift
       @round = 2
       @players.each { |i| i.new_round(@round,[@a,@b,@c,@d,[]]) }
    end
    
    def deal_river
+      init_loop
       @e = @deck.shift
       @round = 3
       @players.each { |i| i.new_round(@round,[@a,@b,@c,@d,@e]) }
@@ -152,7 +155,7 @@ class PokerGame
          nb_player_who_talked += 1
          index, player = get_next_to_call(index)
       end
-      debug  "end player loop"
+      #debug  "end player loop"
 	end
 	
    def get_player(index)
@@ -166,7 +169,7 @@ class PokerGame
 		start = from
       while(true)
          index = (from+1).modulo(nb_players)
-			debug "index #{index}"
+			#debug "index #{index}"
          player = get_player(index)
          next if start != from and (player.infos.folded == true or player.infos.bank_roll <= 0)
          return [index,player]
@@ -174,8 +177,8 @@ class PokerGame
    end
    
    def count_nb_player_to_talk      
-		debug "#{nb_players}"
-      @players.inject(0) { |sum,i| puts i.infos.name; puts sum; (i.infos.folded == false and i.infos.bank_roll > 0) ? sum += 1:sum}
+		#debug "#{nb_players}"
+      @players.inject(0) { |sum,i| (i.infos.folded == false and i.infos.bank_roll > 0) ? sum += 1:sum}
    end
    
 	def small_blind_index
@@ -197,8 +200,7 @@ class PokerGame
 		debug '=============================='
 		debug '======== New hand ============'
 		debug '=============================='
-      @pot_size = @blinds*3
-      @to_call = @blinds*2
+      @pot_size = 0
       @to_call = @blinds*2
 		@button = (@button+1).modulo(nb_players)
 		@deck  = (1..52).sort_by{rand}

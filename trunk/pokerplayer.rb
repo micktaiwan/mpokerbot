@@ -35,7 +35,7 @@ class PlayerInfos
    end
 
    def to_s
-      "#{name} (#{position}) #{action_str(last_action)}. Loop amount: #{loop_amount} Hand amount: #{hand_amount}. Bank roll: #{bank_roll}"
+      "#{name} (#{position}) last action:#{action_str(last_action)}. Loop amount: #{loop_amount} Hand amount: #{hand_amount}. Bank roll: #{bank_roll}"
    end
 
 end
@@ -162,6 +162,8 @@ class PokerPlayer
    
    def new_round(r, c)
       @round, @cards = r, c
+      @infos.loop_amount = 0
+      @players.each_value { |i| i.loop_amount = 0 }
    end
    
 end
