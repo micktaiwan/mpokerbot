@@ -37,16 +37,21 @@ class Hand
     end
   end
   
+  def <=>(other)
+      
+  end
+  
   def evaluate
-    return 'four of a kind' if @ranks.values.max == 4 
-    return 'full house' if (@ranks.values.sort[-1] == 3 && @ranks.values.sort[-2] == 2)
-    return 'straight flush' if (@suits.values.max == 5 && is_straight?)
-    return 'flush' if @suits.values.max == 5
-    return 'straight' if is_straight?
-    return 'three of a kind' if @ranks.values.max == 3
-    return 'two pair' if (@ranks.values.sort[-1] == 2 && @ranks.values.sort[-2] == 2)
-    return 'one pair' if @ranks.values.max == 2
-    raise "UnknownHand"
+    return 8 if @ranks.values.max == 4 # four kind
+    return 7 if (@ranks.values.sort[-1] == 3 && @ranks.values.sort[-2] == 2) # full
+    return 9 if (@suits.values.max == 5 && is_straight?) # str8 flush
+    return 6 if @suits.values.max == 5 # flush
+    return 5 if is_straight? # str8
+    return 4 if @ranks.values.max == 3 # brelan
+    return 3 if (@ranks.values.sort[-1] == 2 && @ranks.values.sort[-2] == 2) # 2 pair
+    return 2 if @ranks.values.max == 2 # pair
+    return 1 if @ranks.values.max == 1 # high card
+    raise 'ooops'
   end 
   
   def is_straight?
@@ -66,6 +71,9 @@ class Hand
   
 end
 
-
+if __FILE__ == $0
+   
 h = Hand.new(['As','3h','5d','4d','2d'])
 puts h.evaluate
+
+end

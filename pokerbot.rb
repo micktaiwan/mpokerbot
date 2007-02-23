@@ -1,3 +1,4 @@
+#!/usr/local/bin/ruby
 require 'pokerplayer'
 
 class PokerBot < PokerPlayer
@@ -13,7 +14,7 @@ class PokerBot < PokerPlayer
    
 	def play
 		calculate_hand
-		debug "PLAYING #{@hole_cards} - to_call: #{@to_call}, pot size: #{@pot_size}, win percent: #{@win_percent}, max call: #{(@pot_size*@win_percent).floor}"
+		debug "===== PLAYING #{@hole_cards} - to_call: #{@to_call}, pot size: #{@pot_size}, win percent: #{@win_percent}, max call: #{(@pot_size*@win_percent).floor}"
 		if @win_percent < 0.3 # no chances to win
 			if @to_call==0 or (@to_call<=10 and @round==0) # TODO: il faut tenir compte des chances d'amélioration (tirages) pour augementer ce seuil
 				action = [CALL] # TODO: tenir compte des hand history (personne n'a raisé et au bouton ) pour peut-être raiser
@@ -48,10 +49,10 @@ class PokerBot < PokerPlayer
 	end
 
    def position_value
-      if(@button < @position)
-         return @nb_players-(@position-@button)
+      if(@button < @infos.position)
+         return @nb_players-(@infos.position-@button)
       else
-         return @button-@position
+         return @button-@infos.position
       end
    end
 
@@ -66,7 +67,7 @@ class PokerBot < PokerPlayer
       end
       # tmp
       v = @starting_hand_eval[str]
-      return 0.5 if v > -0
+      return 0.5 if v > 0
       return 0
    end
    
@@ -102,7 +103,9 @@ class PokerBot < PokerPlayer
       # else
       return 0.2
    end
-   
+
+
+
 	#######
    private
    #######
@@ -139,7 +142,7 @@ if __FILE__ == $0
       end
       
       def test_position_value
-         @p.position = 4
+         @p.infos.position = 4
          @p.nb_players = 10
          rv = []
          0.upto(9) { |i|
