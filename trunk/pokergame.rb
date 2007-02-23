@@ -93,7 +93,7 @@ class PokerGame
                if(@nb_players_in_hand > 1)
                   @nb_players_in_hand -= 1
                   i.infos.folded = true
-               else
+               else # TODO: en fait ça devrait pas arriver, le dernier joueur ne devrait pas être sollicité
                   i.infos.folded = false # can not fold if last player
 						@last_action = [CALL]
                end
