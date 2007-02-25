@@ -56,6 +56,10 @@ module PlayingCards
 		end
 	end
 	
+   def to_arr
+      [self.face,self.suit]
+   end
+   
 end
 
 class Fixnum

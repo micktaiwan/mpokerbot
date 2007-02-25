@@ -3,10 +3,11 @@ require 'cards'
 class PokerGame
 
 	def initialize
-		@players = []
-		@blinds = 5
-		@button = 0
-      @round = 0
+		@players     = []
+		@blinds       = 5
+		@button      = 0
+      @round       = 0
+      @game_id   = 0
 	end
 	
 	def debug str
@@ -115,21 +116,21 @@ class PokerGame
    
    def deal_flop
       init_loop
-      @a,@b,@c = @deck.shift, @deck.shift, @deck.shift
+      @a,@b,@c = @deck.shift.to_arr, @deck.shift.to_arr, @deck.shift.to_arr
       @round = 1
       @players.each { |i| i.new_round(@round,[@a,@b,@c,[],[]]) }
    end
    
    def deal_turn
       init_loop
-      @d = @deck.shift
+      @d = @deck.shift.to_arr
       @round = 2
       @players.each { |i| i.new_round(@round,[@a,@b,@c,@d,[]]) }
    end
    
    def deal_river
       init_loop
-      @e = @deck.shift
+      @e = @deck.shift.to_arr
       @round = 3
       @players.each { |i| i.new_round(@round,[@a,@b,@c,@d,@e]) }
    end
@@ -200,6 +201,7 @@ class PokerGame
 		debug '=============================='
 		debug '======== New hand ============'
 		debug '=============================='
+      @game_id += 1
       @pot_size = 0
       @to_call = @blinds*2
 		@button = (@button+1).modulo(nb_players)
@@ -208,9 +210,9 @@ class PokerGame
 		@players.each_with_index{ |i,index| 
          i.start_hand
 			i.nb_players = @players.size
-			c1 = @deck.shift
-			c2 = @deck.shift
-			i.hole_cards= [[c1.face,c1.suit],[c2.face,c2.suit]]
+			c1 = @deck.shift.to_arr
+			c2 = @deck.shift.to_arr
+			i.hole_cards= [c1,c2]
          i.to_call = @blinds*2
 			i.min_raise = @blinds*2
 			i.max_raise = @blinds*2
@@ -218,6 +220,7 @@ class PokerGame
 			i.infos.folded = false
 			i.button = @button
          i.blinds = @blinds
+         i.game_id = @game_id
 			}
 		@players.each { |i|
          @players.each { |j|

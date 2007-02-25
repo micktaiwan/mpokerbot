@@ -13,6 +13,25 @@ BLIND = 3
       end
    end
 
+class Action
+
+   attr_accessor(
+      :game_id,
+      :round,
+      :player,
+      :action
+      )
+      
+      def initialize(g,r,p,a)
+          @game_id,      @round,      @player,      @action = g,r,p,a      
+      end
+      
+      def to_s
+         "game: #{@game_id}, round: #{@round}, player: #{@player}, action: #{@action.join(":")} "
+      end
+      
+      
+end
 
 class PlayerInfos
 
@@ -57,13 +76,15 @@ class PokerPlayer
       :game_id,      # current game id
       :who,          # who must act
       :round,        # round 0=preflop, 1 flop, 2 turn, 3 river
-      :players
+      :players,
+      :actions
 		)
 		
 	def initialize(name)
 		@name = name
       @total_amount = 0
       @infos = PlayerInfos.new(name,0,0)      
+      @actions = []
       start_hand
 	end
 	
@@ -93,7 +114,7 @@ class PokerPlayer
 	
 	# tells who is the next player to play and if it us return our action
 	def next(is_blind,who, to_call, min, max)
-      #debug "NEXT is #{@players[who].name} (#{who}), to_call=#{to_call}"
+      #debug "NEXT is #{@players[who].name} (#{who}), to_call=#{to_call}, #{who==@infos.position}"
       @who, @to_call, @min_raise, @max_raise = who, to_call, min, max
       return play if(!is_blind and who==@infos.position)
       return nil
@@ -112,6 +133,7 @@ class PokerPlayer
 
    def player_bets(who,amount)
 		@pot_size += amount
+      #debug "+#{amount} = #{pot_size}"
       @players[who].hand_amount += amount
       @players[who].loop_amount += amount
       @players[who].bank_roll -= amount
@@ -125,6 +147,8 @@ class PokerPlayer
    
 	# tells the action played
    def update(who,action)
+      @actions << Action.new(@game_id, @round, who, action)
+      #debug @actions[-1]
       @players[who].last_action = action
 		case action[0]
 			when FOLD
@@ -133,11 +157,11 @@ class PokerPlayer
             player_bets(who,@to_call)
 			when RAISE
             @to_call  = action[1]
-            player_bets(who,action[1]-@players[who].loop_amount)
+            player_bets(who,action[1]) # -@players[who].loop_amount est-ce que avec poki il le faudrait pas ? => ben non
 			when BLIND
             player_bets(who,action[1])
       end
-      debug "UPDATE "+ @players[who].to_s + " Pot: #{@pot_size}. To call: #{@to_call}"
+      #debug "UPDATE "+ @players[who].to_s + " Pot: #{@pot_size}. To call: #{@to_call}"
    end
    
    def winner(who,share)
@@ -150,6 +174,8 @@ class PokerPlayer
    def hand_end
       @infos.total_amount += @infos.hand_amount
       debug "STATS: amount paid: hand: #{@infos.hand_amount}, total:#{@infos.total_amount}"
+      return 0 if @infos.total_amount > 100 # stop if we loose more than 100
+      return 1 # continue
    end
 
 	def info(str)

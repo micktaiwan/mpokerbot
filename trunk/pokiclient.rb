@@ -73,8 +73,9 @@ class PokiClient
             end   
          when 52 # new round
             round, cards = msg.unpack("NZ14")
-            debug "round=#{round}, cards=#{cards}"
-            cards.split.map! {|i| [i[0],i[1]]}
+            #debug "round=#{round}, cards=#{cards}"
+            cards = cards.split.map {|i| [i[0].chr,i[1].chr]}
+            #debug "New round #{round}: #{cards} => #{cards.map {|c| c[0].to_s+c[1].to_s+', '}}"
             @player.new_round(round,cards)
          when 0
             who = msg.unpack("N")[0]
@@ -100,14 +101,13 @@ class PokiClient
                share, from = get_int(msg,8+i*8)
                @player.winner(who,share)
             end   
-            @player.hand_end
-            @tcp.format_send(QUIT_GAME) # one hand after the other
+            @tcp.format_send(QUIT_GAME) if @player.hand_end == 0 
             #break 
          when 57 # NEXT_TO_ACT
             who, to_call = msg.unpack("NN")
 				min, from = get_int(msg,8)
 				max, from = get_int(msg,12)
-            debug "NEXT: #{@player.players[who].name}, to_call=#{to_call}, min=#{min}, max=#{max}"
+            #debug "NEXT: #{@player.players[who].name}, to_call=#{to_call}, min=#{min}, max=#{max}"
             blind = @action_number < 2
             action, how_much = @player.next(blind,who,to_call,min,max)
             if action != nil and who == @player.infos.position
@@ -117,6 +117,14 @@ class PokiClient
          when 60
             debug "PING"
             @tcp.format_send(PONG)
+            
+            #FIXME: should never happen
+            debug "NEXT: #{@player.players[who].name}, to_call=#{to_call}, min=#{min}, max=#{max}"
+            action, how_much = @player.next(blind,who,to_call,min,max)
+            debug "action=#{action_str(action)}, who=#{who}"
+            if action != nil and who == @player.infos.position
+               send_action(action,how_much)
+            end
          when 11 # kicked out
             debug "we've been kicked out!"
          else
