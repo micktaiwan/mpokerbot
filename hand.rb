@@ -1,3 +1,4 @@
+#!/usr/local/bin/ruby
 class Card
     include Comparable
     
@@ -28,6 +29,7 @@ class Hand
   
   def initialize(cards)
     @cards = cards.collect{|card|Card.new(card)}
+    puts "new hand: #{cards.join(', ')}"
     @ranks = Hash.new(0)
     @suits = Hash.new(0)
     
@@ -55,16 +57,17 @@ class Hand
   end 
   
   def is_straight?
-    sorted = @cards.sort_by{|card|card.rank_value}
-    sorted = handle_ace_special_case(sorted)
+    #sorted = @cards.sort_by{|card| card.rank_value}
+    sorted = @cards.map{|e| e.rank_value}.sort.uniq
+    sorted = handle_ace_special_case(sorted) # we loose the Ace
     all_ranks_different = (@ranks.values.max == 1)
-    all_ranks_different && (sorted.last.rank_value - sorted.first.rank_value == 4)
+    all_ranks_different && (sorted.last - sorted.first == 4)
   end
   
   private
   def handle_ace_special_case(array_of_sorted_cards)
-    if (array_of_sorted_cards.last.rank == 'A' && array_of_sorted_cards.first.rank == '2') then
-      array_of_sorted_cards[-1] = Card.new("6s") 
+    if (array_of_sorted_cards.last == 14 && array_of_sorted_cards.first.rank == 2) then
+      array_of_sorted_cards[-1] = 6 #Card.new("6s") 
     end
     array_of_sorted_cards
   end
@@ -73,7 +76,7 @@ end
 
 if __FILE__ == $0
    
-h = Hand.new(['As','3h','5d','4d','2d'])
+h = Hand.new(['As','Ah'])
 puts h.evaluate
 
 end
